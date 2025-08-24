@@ -1,4 +1,4 @@
-package com.example.demo;  // Diese Zeile hinzufügen!
+package com.example.demo;
 
 
 import org.springframework.boot.SpringApplication;
