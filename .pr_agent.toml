@@ -1,8 +1,8 @@
 ```toml
 [config]
 # GPT-4o als Basis-Modell (bestes verfügbares, Stand 2025)
-model = "gpt-4o"
-model_turbo = "gpt-4o-mini"
+model = "gpt-5"
+model_turbo = "gpt-5-mini"
 
 # Internet-Recherche aktivieren
 enable_web_search = true
