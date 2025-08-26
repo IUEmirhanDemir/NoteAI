@@ -1,4 +1,4 @@
-```toml
+'''﻿toml
 [config]
 model = "gpt-5"
 model_turbo = "gpt-5-mini"
@@ -273,4 +273,4 @@ num_code_suggestions = 3
 
 [pr_description]
 enable_pr_description = true
-```
+'''﻿
