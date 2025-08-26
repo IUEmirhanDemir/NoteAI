@@ -1,10 +1,56 @@
-<head>
-  <title>Test Title</title>
-  <link rel="stylesheet" href="styles.css">
-</head>
+<div class="sidebar" [class.collapsed]="isCollapsed()">
+  <!-- Header mit Logo und Collapse Button -->
+  <div class="sidebar-header">
+    <div class="logo" *ngIf="!isCollapsed()">
+      <span class="title-text">{{ appTitle() }}</span>
+    </div>
+    <button class="collapse-btn" (click)="toggleSidebar()">
+      {{ isCollapsed() ? '>' : '<' }}
+    </button>
+  </div>
 
-<body>
-<div class="sidebar">
-  <h1 style="color: antiquewhite">Test</h1>
+  <!-- Content nur wenn nicht collapsed -->
+  <div class="sidebar-content" *ngIf="!isCollapsed()">
+    <!-- Suchfeld -->
+    <div class="search-container">
+      <input
+        type="text"
+        class="search-input"
+        placeholder="Name & Tags durchsuchen..."
+        [(ngModel)]="searchTerm"
+      >
+    </div>
+
+    <!-- Fächer/Kategorien -->
+    <div class="subjects-container">
+      <div
+        class="subject-item"
+        *ngFor="let subject of subjects()"
+        [class.expanded]="subject.expanded"
+      >
+        <div class="subject-header" (click)="toggleSubject(subject)">
+          <span class="subject-name">{{ subject.name }}</span>
+          <span class="expand-icon">{{ subject.expanded ? '∧' : '∨' }}</span>
+        </div>
+
+        <!-- Unterelemente (falls expanded) -->
+        <div class="subject-content" *ngIf="subject.expanded">
+          <div
+            class="subject-subitem"
+            *ngFor="let item of subject.items"
+          >
+            {{ item }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer Button -->
+  <div class="sidebar-footer" *ngIf="!isCollapsed()">
+    <button class="add-button" (click)="addNewModule()">
+      <span class="add-icon">+</span>
+      <span>Neues Modul/Thema</span>
+    </button>
+  </div>
 </div>
-</body>

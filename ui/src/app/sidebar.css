@@ -4,45 +4,239 @@
   box-sizing: border-box;
 }
 
-html, body {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-}
-
 .sidebar {
   position: fixed;
   top: 0;
   left: 0;
-  background-color: black;
+  background-color: #f8f9fa;
   height: 100vh;
+  border-right: 1px solid #e0e0e0;
+  transition: width 0.3s ease;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-/* Desktop - 1/8 der Breite */
+.sidebar.collapsed {
+  width: 60px !important;
+}
+
+/* Header */
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid #e0e0e0;
+  min-height: 60px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.title-text {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.collapse-btn {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: #666;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.collapse-btn:hover {
+  background-color: #e9ecef;
+}
+
+/* Content Area */
+.sidebar-content {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+/* Suchfeld */
+.search-container {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px 10px 10px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  background-color: #fff;
+  transition: border-color 0.2s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+}
+
+.search-input::placeholder {
+  color: #999;
+}
+
+/* Subjects */
+.subjects-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.subject-item {
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.subject-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background-color: #fff;
+  border: 1px solid #e0e0e0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.subject-header:hover {
+  background-color: #f8f9fa;
+  border-color: #d0d7de;
+}
+
+.subject-item.expanded .subject-header {
+  border-bottom: none;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.subject-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+.expand-icon {
+  font-size: 12px;
+  color: #666;
+  transition: transform 0.2s ease;
+}
+
+.subject-item.expanded .expand-icon {
+  transform: rotate(180deg);
+}
+
+/* Subject Content */
+.subject-content {
+  background-color: #fff;
+  border: 1px solid #e0e0e0;
+  border-top: none;
+  border-bottom-left-radius: 6px;
+  border-bottom-right-radius: 6px;
+}
+
+.subject-subitem {
+  padding: 8px 16px 8px 32px;
+  font-size: 13px;
+  color: #666;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.subject-subitem:hover {
+  background-color: #f8f9fa;
+}
+
+.subject-subitem:not(:last-child) {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+/* Footer */
+.sidebar-footer {
+  padding: 16px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.add-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background-color: #1a1d29;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.add-button:hover {
+  background-color: #2a2d39;
+}
+
+.add-icon {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+/* Responsive Design */
+
+/* Extra Large Desktops / 4K Monitore (1200px+) */
 @media (min-width: 1200px) {
   .sidebar {
-    width: 25%; /* 1/8 */
+    width: 300px;
   }
 }
 
-/* Laptop */
+/* Large Desktops / Standard Desktop Monitore (992px - 1199px) */
 @media (min-width: 992px) and (max-width: 1199px) {
   .sidebar {
-    width: 30%; /* Etwas breiter */
+    width: 280px;
   }
 }
 
-/* Tablet */
+/* Tablets / Small Laptops (768px - 991px) */
 @media (min-width: 768px) and (max-width: 991px) {
   .sidebar {
-    width: 35%; /* 1/5 */
+    width: 260px;
   }
 }
 
-/* Mobile */
+/* Mobile Phones / Small Tablets (bis 767px) */
 @media (max-width: 767px) {
   .sidebar {
-    width: 50%;
+    width: 240px;
   }
 }
 
+
+/* Collapsed Statements */
+.sidebar.collapsed .logo,
+.sidebar.collapsed .search-container,
+.sidebar.collapsed .subjects-container,
+.sidebar.collapsed .sidebar-footer {
+  display: none;
+}
+
+.sidebar.collapsed .collapse-btn {
+  margin: 0 auto;
+}

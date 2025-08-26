@@ -1,0 +1,46 @@
+.app-container {
+  min-height: 100vh;
+}
+
+main {
+  min-height: 100vh;
+  padding: 20px;
+  transition: margin-left 0.3s ease;
+}
+
+/* Responsive margins für normale Sidebar */
+@media (min-width: 1200px) {
+  main {
+    margin-left: 25%;
+  }
+  .sidebar.collapsed ~ main {
+    margin-left: 60px;
+  }
+}
+
+@media (min-width: 992px) and (max-width: 1199px) {
+  main {
+    margin-left: 30%;
+  }
+  .sidebar.collapsed ~ main {
+    margin-left: 60px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  main {
+    margin-left: 35%;
+  }
+  .sidebar.collapsed ~ main {
+    margin-left: 60px;
+  }
+}
+
+@media (max-width: 767px) {
+  main {
+    margin-left: 50%;
+  }
+  .sidebar.collapsed ~ main {
+    margin-left: 60px;
+  }
+}
