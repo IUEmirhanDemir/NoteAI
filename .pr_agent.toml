@@ -1,6 +1,6 @@
 [config]
-model = “gpt-5”
-model_turbo = “gpt-5-mini”
+model = "gpt-5"
+model_turbo = "gpt-5-mini"
 enable_web_search = true
 search_for_latest_updates = true
 enable_auto_approval = true
@@ -8,7 +8,7 @@ enable_auto_approval = true
 [pr_reviewer]
 enable_review = true
 persistent_comment = true
-extra_instructions = “””
+extra_instructions = """
 🎓 Du bist ein Senior-Entwickler-Mentor mit Internet-Zugriff
 
 WICHTIG:
@@ -24,88 +24,57 @@ Dein Review-Stil:
 - Sei ermutigend, aber direkt
 - Priorisiere Architektur > Konventionen > Performance
 - Schreibe alle Kommentare und Erklärungen auf DEUTSCH
-  “””
+"""
 
 [pr_reviewer.path_instructions]
-
-“ui/**/*.ts” = “””
+"ui/**/*.ts" = """
 🅰️ ANGULAR 20 CODE ÜBERPRÜFUNG (Stand: 2025)
-
-Nutze Web-Suche für aktuelle Angular 20 Features!
 
 ## 📋 PFLICHT-ÜBERPRÜFUNGEN:
 
 ### 1. Standalone Components (Angular 20 Standard)
 
-```typescript
-// ✅ RICHTIG
-@Component({
-  selector: 'app-benutzer-profil', // kebab-case verwenden!
-  standalone: true,
-  imports: [CommonModule, BenutzerKarteComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush
-})
-export class BenutzerProfilComponent {
-  // Signal-basierter Zustand
-  benutzer = signal<Benutzer[]>([]);
-  ausgewaehlterBenutzer = signal<Benutzer | null>(null);
-  
-  // Berechnete Werte
-  benutzerAnzahl = computed(() => this.benutzer().length);
-  
-  // inject() statt Constructor Injection verwenden
-  private benutzerService = inject(BenutzerService);
-  private destroyRef = inject(DestroyRef);
-}
-```
+# Beispiel:
+# @Component({
+#   selector: "app-benutzer-profil",
+#   standalone: true,
+#   imports: [CommonModule, BenutzerKarteComponent],
+#   changeDetection: ChangeDetectionStrategy.OnPush
+# })
+# export class BenutzerProfilComponent {
+#   benutzer = signal<Benutzer[]>([]);
+#   ausgewaehlterBenutzer = signal<Benutzer | null>(null);
+#   benutzerAnzahl = computed(() => this.benutzer().length);
+#   private benutzerService = inject(BenutzerService);
+#   private destroyRef = inject(DestroyRef);
+# }
 
 ### 2. Signal-basiertes Zustandsmanagement
-
-- ✅ signal() für lokalen Zustand verwenden
-- ✅ computed() für abgeleitete Werte
-- ✅ effect() nur wenn nötig
-- ❌ KEINE BehaviorSubjects mehr für Component-Zustand
+- signal() für lokalen Zustand verwenden
+- computed() für abgeleitete Werte
+- effect() nur wenn nötig
+- Keine BehaviorSubjects mehr für Component-Zustand
 
 ### 3. RxJS Bewährte Methoden
-
-```typescript
-// ✅ RICHTIG - Automatisches Abmelden mit takeUntilDestroyed
-ngOnInit() {
-  this.benutzerService.getBenutzer()
-    .pipe(takeUntilDestroyed(this.destroyRef))
-    .subscribe(benutzer => this.benutzer.set(benutzer));
-}
-```
+- takeUntilDestroyed für automatisches Abmelden nutzen
 
 ### 4. Performance Muster
+- OnPush Change Detection überall
+- trackBy bei *ngFor immer verwenden
+- Keine Funktionen in Templates
+- Lazy Loading für Features
 
-- ✅ OnPush Change Detection überall verwenden
-- ✅ trackBy bei *ngFor immer verwenden
-- ❌ Keine Funktionen in Templates
-- ✅ Lazy Loading für Features implementieren
+Lern-Links:
+- https://angular.dev/guide/signals
+- https://angular.dev/guide/standalone-components
+- https://angular.dev/guide/rx-library
+"""
 
-## 🏗️ ARCHITEKTUR-ÜBERPRÜFUNG:
-
-- Smart/Dumb Component Muster eingehalten?
-- Services für Geschäftslogik verwendet?
-- Ordnungsgemäße Trennung der Zuständigkeiten?
-
-## 📚 LERN-LINKS:
-
-- Angular 20 Signals: https://angular.dev/guide/signals
-- Standalone Components: https://angular.dev/guide/standalone-components
-- RxJS Bewährte Methoden: https://angular.dev/guide/rx-library
-
-ERKLÄRE IMMER mit Vorher/Nachher Code-Beispielen auf DEUTSCH!
-“””
-
-“ui/**/*.html” = “””
+"ui/**/*.html" = """
 🎨 ANGULAR 20 TEMPLATE ÜBERPRÜFUNG
 
 ### Neue Control Flow Syntax (Angular 20)
 
-```html
-<!-- ✅ RICHTIG - Neue Syntax verwenden -->
 @if (istLaden()) {
   <app-ladebalken />
 } @else if (hatFehler()) {
@@ -115,36 +84,31 @@ ERKLÄRE IMMER mit Vorher/Nachher Code-Beispielen auf DEUTSCH!
     <app-benutzer-karte [benutzer]="benutzer" />
   }
 }
-```
 
-### Performance & Barrierefreiheit
+Performance & Barrierefreiheit:
+- track immer verwenden
+- ARIA-Labels für Barrierefreiheit
+- Lazy Loading für Bilder
+- Keine komplexen Ausdrücke im Template
+"""
 
-- ✅ trackBy/track immer verwenden
-- ✅ ARIA-Labels für Barrierefreiheit
-- ✅ Lazy Loading für Bilder
-- ❌ Keine komplexen Ausdrücke im Template
-  “””
-
-“server/**/*.java” = “””
+"server/**/*.java" = """
 ☕ SPRING BOOT 3.3 CONTROLLER ÜBERPRÜFUNG (2025 Standards)
 
 ## REST Controller Muster:
 
-```java
 @RestController
 @RequestMapping("/api/v1/benutzer")
-@Tag(name = "Benutzerverwaltung") // OpenAPI Dokumentation
+@Tag(name = "Benutzerverwaltung")
 @Validated
 @Slf4j
 public class BenutzerController {
-    
     private final BenutzerService benutzerService;
-    
-    // ✅ Constructor Injection (Bewährte Methode)
+
     public BenutzerController(BenutzerService benutzerService) {
         this.benutzerService = benutzerService;
     }
-    
+
     @GetMapping
     @Operation(summary = "Alle Benutzer abrufen")
     public ResponseEntity<Page<BenutzerDto>> getBenutzer(
@@ -152,155 +116,107 @@ public class BenutzerController {
         log.debug("Lade Benutzer mit Paginierung: {}", pageable);
         return ResponseEntity.ok(benutzerService.findAll(pageable));
     }
-    
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public BenutzerDto erstelleBenutzer(@RequestBody @Valid ErstelleBenutzerRequest request) {
         return benutzerService.erstellen(request);
     }
 }
-```
 
-## ÜBERPRÜFUNGEN:
+Checks:
+- Korrekte HTTP Status Codes
+- Eingabe-Validierung mit @Valid
+- Konsistente Fehlerbehandlung
+- OpenAPI Dokumentation
+- Logging bewährte Methoden
+"""
 
-- ✅ Korrekte HTTP Status Codes verwenden
-- ✅ Eingabe-Validierung mit @Valid
-- ✅ Konsistente Fehlerbehandlung
-- ✅ OpenAPI Dokumentation
-- ✅ Bewährte Logging-Methoden
-
-Verlinke zu Spring Dokumentation wenn relevant!
-“””
-
-“server/**/*Service.java” = “””
+"server/**/*Service.java" = """
 🔧 SERVICE SCHICHT ÜBERPRÜFUNG
 
-## Service Muster:
-
-```java
 @Service
 @Slf4j
-@Transactional(readOnly = true) // Standard: Nur lesen
+@Transactional(readOnly = true)
 public class BenutzerService {
-    
     private final BenutzerRepository benutzerRepository;
     private final BenutzerMapper benutzerMapper;
-    
-    // Constructor Injection verwenden
+
     public BenutzerService(BenutzerRepository benutzerRepository, BenutzerMapper benutzerMapper) {
         this.benutzerRepository = benutzerRepository;
         this.benutzerMapper = benutzerMapper;
     }
-    
-    @Transactional // Schreibvorgang
+
+    @Transactional
     public BenutzerDto erstellen(ErstelleBenutzerRequest request) {
         log.info("Erstelle neuen Benutzer: {}", request.email());
-        
-        // Geschäftslogik & Validierung
         if (benutzerRepository.existsByEmail(request.email())) {
             throw new BusinessException("E-Mail bereits vergeben");
         }
-        
         Benutzer benutzer = benutzerMapper.toEntity(request);
         Benutzer gespeichert = benutzerRepository.save(benutzer);
-        
         return benutzerMapper.toDto(gespeichert);
     }
-    
-    // Abfrage-Methoden bleiben read-only
+
     public Page<BenutzerDto> findAll(Pageable pageable) {
         return benutzerRepository.findAll(pageable)
             .map(benutzerMapper::toDto);
     }
 }
-```
 
-## ARCHITEKTUR-REGELN:
-
+Architektur-Regeln:
 - Controller → Service → Repository
-- DTOs für API Kommunikation
-- Mapper für Entity ↔ DTO Umwandlung
-- Geschäftslogik NUR in der Service Schicht!
-  “””
+- DTOs für API
+- Mapper für Entity ↔ DTO
+- Geschäftslogik nur in Services
+"""
 
-“server/**/dto/*.java” = “””
+"server/**/dto/*.java" = """
 📦 DTO & VALIDIERUNG ÜBERPRÜFUNG
 
-## Moderne DTOs mit Records (Java 17+):
-
-```java
-// ✅ Request DTO mit Validierung
+Request DTO:
 public record ErstelleBenutzerRequest(
     @NotBlank(message = "Name ist erforderlich")
     @Size(min = 2, max = 100, message = "Name muss zwischen 2 und 100 Zeichen haben")
     String name,
-    
+
     @NotNull(message = "E-Mail ist erforderlich")
     @Email(message = "Ungültige E-Mail-Adresse")
     String email,
-    
+
     @NotNull(message = "Alter ist erforderlich")
     @Min(value = 18, message = "Mindestalter ist 18 Jahre")
     @Max(value = 120, message = "Maximalalter ist 120 Jahre")
     Integer alter
-) {
-    // Benutzerdefinierte Validierung wenn nötig
-    public ErstelleBenutzerRequest {
-        if (name != null) {
-            name = name.trim(); // Leerzeichen entfernen
-        }
-    }
-}
+) {}
 
-// ✅ Response DTO
+Response DTO:
 public record BenutzerDto(
     Long id,
     String name,
     String email,
     LocalDateTime erstelltAm
 ) {}
-```
+"""
 
-## ÜBERPRÜFUNGEN:
+"server/**/mapper/*.java" = """
+🔄 MAPPER ÜBERPRÜFUNG (MapStruct)
 
-- ✅ Bean Validation Annotationen verwenden
-- ✅ Aussagekräftige Fehlermeldungen auf Deutsch
-- ✅ Unveränderliche DTOs (Records)
-- ✅ Keine Geschäftslogik in DTOs
-  “””
-
-“server/**/mapper/*.java” = “””
-🔄 MAPPER ÜBERPRÜFUNG (MapStruct Bewährte Methoden)
-
-```java
 @Mapper(componentModel = "spring")
 public interface BenutzerMapper {
-    
-    // Entity → DTO Umwandlung
     BenutzerDto toDto(Benutzer benutzer);
-    
-    // DTO → Entity Umwandlung
+
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "erstelltAm", ignore = true)
     @Mapping(target = "aktualisiertAm", ignore = true)
     Benutzer toEntity(ErstelleBenutzerRequest request);
-    
-    // Sammlungs-Mapping
+
     List<BenutzerDto> toDtoList(List<Benutzer> benutzer);
-    
-    // Bestehende Entity aktualisieren
+
     @Mapping(target = "id", ignore = true)
     void updateEntity(UpdateBenutzerRequest request, @MappingTarget Benutzer benutzer);
 }
-```
-
-Überprüfe:
-
-- ✅ Keine manuellen Mappings verwenden
-- ✅ Ordnungsgemäße null-Behandlung
-- ✅ Konsistente Benennung auf Deutsch
-- ✅ Ignorierte Felder dokumentiert (id, timestamps)
-  “””
+"""
 
 [pr_code_suggestions]
 enable_code_suggestions = true
