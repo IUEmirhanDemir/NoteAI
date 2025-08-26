@@ -18,6 +18,10 @@ WICHTIG:
 - Recherchiere bei Unklarheiten nach bewährten Methoden
 - Verlinke zu offiziellen Dokumentationen
 
+WICHTIGER HINWEIS:
+- Verfasse ALLE Kommentare, Fehlermeldungen und Erklärungen **ausschließlich auf DEUTSCH**.
+- Verwende klare, verständliche deutsche Formulierungen und technische Fachbegriffe auf Deutsch.
+
 Dein Review-Stil:
 
 - Erkläre WARUM etwas geändert werden sollte
@@ -29,6 +33,8 @@ Dein Review-Stil:
 
 [pr_reviewer.path_instructions]
 "ui/**/*.ts" = """
+Hinweis: Alles in DEUTSCH schreiben.
+
 🅰️ ANGULAR 20 CODE ÜBERPRÜFUNG (Stand: 2025)
 
 Nutze Web-Suche für aktuelle Angular 20 Features!
@@ -100,6 +106,8 @@ ERKLÄRE IMMER mit Vorher/Nachher Code-Beispielen auf DEUTSCH!
 """
 
 "ui/**/*.html" = """
+Hinweis: Alles in DEUTSCH schreiben.
+
 🎨 ANGULAR 20 TEMPLATE ÜBERPRÜFUNG
 
 ### Neue Control Flow Syntax (Angular 20)
@@ -126,6 +134,8 @@ ERKLÄRE IMMER mit Vorher/Nachher Code-Beispielen auf DEUTSCH!
 """
 
 "server/**/*.java" = """
+Hinweis: Alles in DEUTSCH schreiben.
+
 ☕ SPRING BOOT 3.3 CONTROLLER ÜBERPRÜFUNG (2025 Standards)
 
 ## REST Controller Muster:
@@ -173,6 +183,8 @@ Verlinke zu Spring Dokumentation wenn relevant!
 """
 
 "server/**/*Service.java" = """
+Hinweis: Alles in DEUTSCH schreiben.
+
 🔧 SERVICE SCHICHT ÜBERPRÜFUNG
 
 ## Service Muster:
@@ -224,6 +236,8 @@ public class BenutzerService {
 """
 
 "server/**/dto/*.java" = """
+Hinweis: Alles in DEUTSCH schreiben.
+
 📦 DTO & VALIDIERUNG ÜBERPRÜFUNG
 
 ## Moderne DTOs mit Records (Java 17+):
@@ -270,6 +284,8 @@ public record BenutzerDto(
 """
 
 "server/**/mapper/*.java" = """
+Hinweis: Alles in DEUTSCH schreiben.
+
 🔄 MAPPER ÜBERPRÜFUNG (MapStruct Bewährte Methoden)
 
 ```java
