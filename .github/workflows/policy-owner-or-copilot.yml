@@ -1,0 +1,32 @@
+name: Policy: Owner OR Copilot
+on: [pull_request]
+permissions: { contents: read, pull-requests: read, statuses: write }
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const { owner, repo } = context.repo;
+            const sha = pr.head.sha;
+
+            // Copilot-Check grün?
+            const { data: st } = await github.rest.repos.getCombinedStatusForRef({ owner, repo, ref: sha });
+            const copilotOK = st.statuses.some(s => (s.context||'').toLowerCase().includes('copilot') && s.state==='success');
+
+            // Dein Approval?
+            const OWNER='IUEmirhanDemir'; 
+            const { data: rev } = await github.rest.pulls.listReviews({ owner, repo, pull_number: pr.number, per_page: 100 });
+            const latest = {};
+            for (const r of rev) latest[r.user?.login] = r.state;
+            const ownerOK = latest[OWNER] === 'APPROVED';
+
+            const ok = copilotOK || ownerOK;
+            await github.rest.repos.createCommitStatus({
+              owner, repo, sha,
+              state: ok ? 'success' : 'failure',
+              context: 'policy/owner-or-copilot',
+              description: ok ? 'Copilot OK oder Owner-Approval' : 'Benötigt Copilot OK oder Owner-Approval'
+            });
