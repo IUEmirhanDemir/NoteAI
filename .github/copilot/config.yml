@@ -3,7 +3,7 @@ version: 1
 
 rules:
   - name: "Pull Request Review"
-    description: "Copilot überprüft Pull Requests wie ein Senior-Mentor (Deutsch, strukturierte Reviews mit Tasks und Zeilenkommentaren)."
+    description: "Copilot überprüft PRs wie ein Senior-Mentor (Deutsch, strukturierte Reviews mit Tasks und Zeilenkommentaren)."
     triggers:
       - "pull_request"
       - "pull_request_review_requested"
@@ -12,20 +12,17 @@ rules:
     actions:
       - type: "review"
         language: "de"
-        style:
-          - "freundlich"
-          - "konstruktiv"
-          - "didaktisch"
-        focus:
-          - "Codequalität"
-          - "Lesbarkeit"
-          - "Best Practices"
-          - "Fehler oder mögliche Bugs"
-          - "Verbesserungsvorschläge"
+        style: ["freundlich", "konstruktiv", "didaktisch"]
+        focus: ["Codequalität", "Lesbarkeit", "Best Practices", "Fehler oder mögliche Bugs", "Verbesserungsvorschläge"]
+
+        guidance:
+          files:
+            - ".github/copilot-instructions.md"
 
         structure:
           require_all_sections: true
           sections_in_order:
+            - "Pull Request Überblick"
             - "🎉 Positive Aspekte"
             - "🔧 Framework-Updates & Modernisierung"
             - "📋 Mentor-Tasks"
@@ -54,7 +51,7 @@ rules:
         limits:
           max_total_comments: 30
           group_similar_findings: true
-          update_previous_bot_comment: true   # ersetzt anstatt zu spammen
+          update_previous_bot_comment: true
 
         placeholders:
           missing_path_line_format: "[<pfad>:<zeile?>] [unbestätigt]"
