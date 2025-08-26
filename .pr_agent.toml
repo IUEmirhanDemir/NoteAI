@@ -1,0 +1,355 @@
+```toml
+[config]
+# GPT-4o als Basis-Modell (bestes verfügbares, Stand 2025)
+model = "gpt-4o"
+model_turbo = "gpt-4o-mini"
+
+# Internet-Recherche aktivieren
+enable_web_search = true
+search_for_latest_updates = true
+
+# Auto-Approval für sichere Changes
+enable_auto_approval = true
+
+[pr_reviewer]
+# Aktiviere ausführliche Junior-Mentoring-Reviews
+enable_review = true
+persistent_comment = true
+extra_instructions = """
+🎓 **Du bist ein Senior-Developer-Mentor mit Internet-Zugriff**
+
+WICHTIG: 
+- Nutze Web-Suche für aktuelle Angular 20 und Spring Boot 3.3 Standards (Stand 2025)
+- Recherchiere bei Unklarheiten nach Best Practices
+- Verlinke zu offiziellen Dokumentationen
+
+Dein Review-Stil:
+- Erkläre WARUM etwas geändert werden sollte
+- Zeige WIE es richtig gemacht wird (mit Code-Beispielen)
+- Sei ermutigend, aber direkt
+- Priorisiere Architektur > Conventions > Performance
+"""
+
+# Path-spezifische Reviews
+[pr_reviewer.path_instructions]
+
+# === ANGULAR 20 REVIEWS ===
+"ui/**/*.ts" = """
+🅰️ **ANGULAR 20 CODE REVIEW (Stand: 2025)**
+
+Nutze Web-Suche für aktuelle Angular 20 Features!
+
+## 📋 PFLICHT-CHECKS:
+
+### 1. Standalone Components (Angular 20 Standard)
+```typescript
+// ✅ RICHTIG
+@Component({
+  selector: 'app-user-profile', // kebab-case!
+  standalone: true,
+  imports: [CommonModule, UserCardComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush
+})
+export class UserProfileComponent {
+  // Signal-based state
+  users = signal<User[]>([]);
+  selectedUser = signal<User | null>(null);
+  
+  // Computed values
+  userCount = computed(() => this.users().length);
+  
+  // inject() statt constructor injection
+  private userService = inject(UserService);
+  private destroyRef = inject(DestroyRef);
+}
+```
+
+### 2. Signal-based State Management
+- ✅ `signal()` für lokalen State
+- ✅ `computed()` für abgeleitete Werte
+- ✅ `effect()` nur wenn nötig
+- ❌ KEINE BehaviorSubjects mehr für Component State
+
+### 3. RxJS Best Practices
+```typescript
+// ✅ RICHTIG - Auto-Unsubscribe mit takeUntilDestroyed
+ngOnInit() {
+  this.userService.getUsers()
+    .pipe(takeUntilDestroyed(this.destroyRef))
+    .subscribe(users => this.users.set(users));
+}
+```
+
+### 4. Performance Patterns
+- ✅ OnPush Change Detection überall
+- ✅ trackBy bei *ngFor
+- ❌ Keine Functions in Templates
+- ✅ Lazy Loading für Features
+
+## 🏗️ ARCHITEKTUR-CHECK:
+- Smart/Dumb Component Pattern eingehalten?
+- Services für Business Logic verwendet?
+- Proper Separation of Concerns?
+
+## 📚 LEARNING LINKS:
+- Angular 20 Signals: https://angular.dev/guide/signals
+- Standalone Components: https://angular.dev/guide/standalone-components
+- RxJS Best Practices: https://angular.dev/guide/rx-library
+
+ERKLÄRE IMMER mit Vorher/Nachher Code-Beispielen!
+"""
+
+"ui/**/*.html" = """
+🎨 **ANGULAR 20 TEMPLATE REVIEW**
+
+### Neue Control Flow Syntax (Angular 20)
+```html
+<!-- ✅ RICHTIG - Neue Syntax -->
+@if (isLoading()) {
+  <app-spinner />
+} @else if (hasError()) {
+  <app-error [message]="errorMessage()" />
+} @else {
+  @for (user of users(); track user.id) {
+    <app-user-card [user]="user" />
+  }
+}
+```
+
+### Performance & Accessibility
+- ✅ trackBy/track immer verwenden
+- ✅ ARIA-Labels für Accessibility
+- ✅ Lazy Loading für Images
+- ❌ Keine komplexen Expressions im Template
+"""
+
+# === JAVA SPRING BOOT REVIEWS ===
+"server/**/controller/**/*.java" = """
+☕ **SPRING BOOT CONTROLLER REVIEW (2025 Standards – Version 3.3)**
+
+## REST Controller Pattern:
+```java
+@RestController
+@RequestMapping("/api/v1/users")
+@Tag(name = "User Management") // OpenAPI
+@Validated
+@Slf4j
+public class UserController {
+    
+    private final UserService userService;
+    
+    // ✅ Constructor Injection (Best Practice)
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
+    
+    @GetMapping
+    @Operation(summary = "Get all users")
+    public ResponseEntity<Page<UserDto>> getUsers(
+            @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
+        log.debug("Fetching users with pagination: {}", pageable);
+        return ResponseEntity.ok(userService.findAll(pageable));
+    }
+    
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public UserDto createUser(@RequestBody @Valid CreateUserRequest request) {
+        return userService.create(request);
+    }
+}
+```
+
+## CHECKS:
+- ✅ Proper HTTP Status Codes
+- ✅ Input Validation mit @Valid
+- ✅ Consistent Error Handling
+- ✅ OpenAPI Documentation
+- ✅ Logging Best Practices
+
+Verlinke zu Spring Docs wenn relevant! (z. B. https://spring.io/projects/spring-boot)
+"""
+
+"server/**/service/**/*.java" = """
+🔧 **SERVICE LAYER REVIEW**
+
+## Service Pattern für deine Architektur:
+```java
+@Service
+@Slf4j
+@Transactional(readOnly = true) // Default read-only
+public class UserService {
+    
+    private final UserRepository userRepository;
+    private final UserMapper userMapper;
+    
+    // Constructor injection
+    public UserService(UserRepository userRepository, UserMapper userMapper) {
+        this.userRepository = userRepository;
+        this.userMapper = userMapper;
+    }
+    
+    @Transactional // Write operation
+    public UserDto create(CreateUserRequest request) {
+        log.info("Creating new user: {}", request.email());
+        
+        // Business logic & validation
+        if (userRepository.existsByEmail(request.email())) {
+            throw new BusinessException("Email bereits vergeben");
+        }
+        
+        User user = userMapper.toEntity(request);
+        User saved = userRepository.save(user);
+        
+        return userMapper.toDto(saved);
+    }
+    
+    // Query methods bleiben read-only
+    public Page<UserDto> findAll(Pageable pageable) {
+        return userRepository.findAll(pageable)
+            .map(userMapper::toDto);
+    }
+}
+```
+
+## ARCHITEKTUR-REGELN für dein Setup:
+- Controller → Service → Repository
+- DTOs für API Communication
+- Mapper für Entity ↔ DTO Conversion
+- Business Logic NUR im Service Layer!
+"""
+
+"server/**/dto/**/*.java" = """
+📦 **DTO & VALIDATION REVIEW**
+
+## Modern DTOs mit Records (Java 17+):
+```java
+// ✅ Request DTO mit Validation
+public record CreateUserRequest(
+    @NotBlank(message = "Name ist erforderlich")
+    @Size(min = 2, max = 100)
+    String name,
+    
+    @NotNull
+    @Email(message = "Ungültige E-Mail-Adresse")
+    String email,
+    
+    @NotNull
+    @Min(18)
+    @Max(120)
+    Integer age
+) {
+    // Custom validation wenn nötig
+    public CreateUserRequest {
+        if (name != null) {
+            name = name.trim();
+        }
+    }
+}
+
+// ✅ Response DTO
+public record UserDto(
+    Long id,
+    String name,
+    String email,
+    LocalDateTime createdAt
+) {}
+```
+
+## CHECKS:
+- ✅ Bean Validation Annotations
+- ✅ Meaningful Error Messages
+- ✅ Immutable DTOs (Records)
+- ✅ No Business Logic in DTOs
+"""
+
+"server/**/mapper/**/*.java" = """
+🔄 **MAPPER REVIEW (MapStruct Best Practices)**
+
+```java
+@Mapper(componentModel = "spring")
+public interface UserMapper {
+    
+    // Entity → DTO
+    UserDto toDto(User user);
+    
+    // DTO → Entity
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    User toEntity(CreateUserRequest request);
+    
+    // Collection mapping
+    List<UserDto> toDtoList(List<User> users);
+    
+    // Update existing entity
+    @Mapping(target = "id", ignore = true)
+    void updateEntity(UpdateUserRequest request, @MappingTarget User user);
+}
+```
+
+Prüfe:
+- ✅ Keine manuellen Mappings
+- ✅ Proper null handling
+- ✅ Consistent naming
+"""
+
+[pr_code_suggestions]
+# Code-Verbesserungen aktivieren
+enable_code_suggestions = true
+num_code_suggestions = 3
+
+[pr_description]
+# Automatische PR-Beschreibungen
+enable_pr_description = true
+```
+
+### 3️⃣ **Trigger-Kommentare für manuelle Reviews**
+
+In jedem Pull Request (PR) können Sie kommentieren:  
+- `/review` – Vollständiges Review  
+- `/improve` – Code-Verbesserungen vorschlagen  
+- `/describe` – PR-Beschreibung generieren  
+- `/ask <Frage>` – Spezifische Fragen mit Web-Recherche beantworten  
+
+### 4️⃣ **Was Sie jetzt haben**
+
+✅ **Automatische PR-Reviews** mit Internet-Recherche  
+✅ **Angular 20 & Spring Boot 3.3** Standards (aktualisiert 2025)  
+✅ **Junior-Mentoring** mit Erklärungen und Beispielen  
+✅ **Architektur-Checks** für Ihre Package-Struktur  
+✅ **Auto-Approval** Option (konfigurierbar)  
+✅ **Kostenlos** für Open Source (bis 100 PRs/Monat)  
+
+## 💡 **Zusätzliche Power-Features**
+
+Fügen Sie dies in `.pr_agent.toml` ein, um die Recherche zu erweitern:
+
+```toml
+# Erweiterte Internet-Recherche
+[pr_reviewer.research]
+# Bei unbekannten Patterns recherchieren
+auto_research_unknown_patterns = true
+research_sources = ["official_docs", "stackoverflow", "medium"]
+
+# Spezielle Prompts für Junior-Training
+[pr_reviewer.mentoring]
+explain_level = "junior" # Ausführliche Erklärungen
+show_examples = true
+link_to_tutorials = true
+suggest_learning_resources = true
+```
+
+## 🎯 **Test-PR erstellen**
+
+Erstellen Sie einen Test-PR mit "schlechtem" Code, um das Tool zu testen:
+
+```typescript
+// ui/test-component.ts - Absichtlich "schlecht"
+export class TestComponent {
+  users = [];  // Wird kritisiert: Fehlende Types, kein Signal
+  
+  getUsers() {  // Wird kritisiert: Sollte im Service sein
+    return this.http.get('/api/users');
+  }
+}
+```
