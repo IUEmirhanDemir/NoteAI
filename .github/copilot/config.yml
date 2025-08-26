@@ -1,0 +1,23 @@
+# GitHub Copilot Konfiguration
+# Datei: .github/copilot/config.yml
+
+version: 1
+
+rules:
+  - name: "Pull Request Review"
+    description: "Copilot überprüft Pull Requests wie ein Mentor."
+    triggers:
+      - "pull_request"
+    actions:
+      - type: "review"
+        language: "de"
+        style:
+          - "freundlich"
+          - "konstruktiv"
+          - "didaktisch"
+        focus:
+          - "Codequalität"
+          - "Lesbarkeit"
+          - "Best Practices"
+          - "Fehler oder mögliche Bugs"
+          - "Verbesserungsvorschläge"
