@@ -1,35 +1,63 @@
-name: Auto-approve (owner or copilot)
+name: Auto-approve (owner or copilot label)
 
 on:
   pull_request_target:
     types: [opened, edited, labeled, synchronize]
 
 permissions:
-  pull-requests: write
   contents: read
+  pull-requests: write
 
 jobs:
   auto-approve:
     runs-on: ubuntu-latest
+    env:
+      APPROVER_PAT: ${{ secrets.APPROVER_PAT }}
+      ALLOWED_USER: "IUEmirhanDemir"   # <= dein GitHub Username
+      COPILOT_LABEL: "copilot-approved"
     steps:
-      - name: Load event info
-        id: info
+      - name: Load PR event
+        id: load
         run: |
-          echo "pr_author=${{ github.event.pull_request.user.login }}" >> $GITHUB_OUTPUT
-          # collect label names (comma separated)
-          labels=$(jq -r '.pull_request.labels[].name // empty' < "$GITHUB_EVENT_PATH" | paste -sd "," -)
-          echo "labels=$labels" >> $GITHUB_OUTPUT
+          echo "PR_NUMBER=$(jq -r .pull_request.number < $GITHUB_EVENT_PATH)" >> $GITHUB_OUTPUT
+          echo "PR_AUTHOR=$(jq -r .pull_request.user.login < $GITHUB_EVENT_PATH)" >> $GITHUB_OUTPUT
+          labels=$(jq -r '.pull_request.labels[].name // empty' < $GITHUB_EVENT_PATH | paste -sd "," -)
+          echo "PR_LABELS=$labels" >> $GITHUB_OUTPUT
+          echo "HEAD_REPO=$(jq -r .pull_request.head.repo.full_name < $GITHUB_EVENT_PATH)" >> $GITHUB_OUTPUT
+        shell: bash
 
-      - name: Auto-approve if author is allowed user
-        if: ${{ steps.info.outputs.pr_author == 'IUEmirhanDemir' }}
-        uses: hmarr/auto-approve-action@v4
-        with:
-          github-token: ${{ secrets.APPROVER_PAT }}
-          review-message: "Auto-approved: Author is allowed user."
+      - name: Decide & Approve (if allowed)
+        run: |
+          pr_number="${{ steps.load.outputs.PR_NUMBER }}"
+          pr_author="${{ steps.load.outputs.PR_AUTHOR }}"
+          pr_labels="${{ steps.load.outputs.PR_LABELS }}"
+          head_repo="${{ steps.load.outputs.HEAD_REPO }}"
+          repo="${{ github.repository }}"
 
-      - name: Auto-approve if copilot-approved label present
-        if: contains( steps.info.outputs.labels, 'copilot-approved' )
-        uses: hmarr/auto-approve-action@v4
-        with:
-          github-token: ${{ secrets.APPROVER_PAT }}
-          review-message: "Auto-approved: label copilot-approved present."
+          echo "PR #$pr_number by $pr_author (head repo: $head_repo)"
+          # Safety: do not run for forks (prevents secret exposure)
+          if [ "$head_repo" != "$repo" ]; then
+            echo "PR is from a fork ($head_repo) — skipping approval to avoid exposing secrets."
+            exit 0
+          fi
+
+          # Condition: author is allowed OR label is present
+          if [ "$pr_author" = "$ALLOWED_USER" ] || echo "$pr_labels" | grep -qw "$COPILOT_LABEL"; then
+            echo "Condition met — approving PR #$pr_number"
+            api_url="https://api.github.com/repos/${repo}/pulls/${pr_number}/reviews"
+            body='{"event":"APPROVE","body":"Auto-approved by workflow (allowed author or copilot-approved label)."}'
+            http_status=$(curl -s -o /dev/null -w "%{http_code}" \
+              -X POST "$api_url" \
+              -H "Authorization: token ${APPROVER_PAT}" \
+              -H "Accept: application/vnd.github+json" \
+              -d "$body")
+            if [ "$http_status" -ge 200 ] && [ "$http_status" -lt 300 ]; then
+              echo "Approval posted (HTTP $http_status)."
+            else
+              echo "Failed to post approval (HTTP $http_status)."
+              exit 1
+            fi
+          else
+            echo "No approval conditions met: author=$pr_author ; labels=$pr_labels"
+          fi
+        shell: bash
