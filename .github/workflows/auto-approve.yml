@@ -4,14 +4,15 @@ on:
   pull_request_target:
     types: [opened, edited, labeled, synchronize, reopened]
 
+# Falls du in den Repo-Settings nicht "Read and write" gesetzt hast:
 permissions:
   pull-requests: write
   contents: read
 
 env:
-  # Dein eigener Account: Eigene PRs werden nicht auto-approved
+  # Dein eigener Account: Eigene PRs NICHT auto-approven
   ALLOWED_USER: IUEmirhanDemir
-  # Label, das Copilot-PRs kennzeichnet (bei Bedarf anpassen)
+  # Label, das Copilot-PRs markiert
   COPILOT_LABEL: copilot
 
 jobs:
@@ -29,38 +30,16 @@ jobs:
           labels=$(jq -r '.pull_request.labels[].name // empty' "$GITHUB_EVENT_PATH" | paste -sd "," -)
           echo "labels=$labels" >> $GITHUB_OUTPUT
 
-      - name: Decide action (no auto-merge)
-        id: decide
-        # Nur offene PRs, kein Fork, und nicht dein eigener PR
-        if: ${{ steps.pr.outputs.state == 'open' && steps.pr.outputs.head_repo == steps.pr.outputs.base_repo && steps.pr.outputs.author != env.ALLOWED_USER }}
-        env:
-          PR_LABELS: ${{ steps.pr.outputs.labels }}
-        run: |
-          echo "🔍 PR #${{ steps.pr.outputs.number }} by ${{ steps.pr.outputs.author }} from ${{ steps.pr.outputs.head_repo }}"
-          echo "📊 Labels: $PR_LABELS"
-          if echo "$PR_LABELS" | tr ',' '\n' | grep -qx "${COPILOT_LABEL}"; then
-            echo "approve=yes" >> $GITHUB_OUTPUT
-            echo "✅ Copilot-Label gefunden: ${COPILOT_LABEL} — freigeben (kein Merge)."
-          else
-            echo "approve=no" >> $GITHUB_OUTPUT
-            echo "ℹ️ Kein Copilot-Label — keine Aktion."
-          fi
-
-      - name: Approve (no merge)
-        if: ${{ steps.decide.outputs.approve == 'yes' }}
+      - name: Approve if copilot label (no merge)
+        # Bedingungen: PR offen, kein Fork, nicht dein eigener PR, Label vorhanden
+        if: >
+          ${{
+            steps.pr.outputs.state == 'open' &&
+            steps.pr.outputs.head_repo == steps.pr.outputs.base_repo &&
+            steps.pr.outputs.author != env.ALLOWED_USER &&
+            contains( format(',{0},', steps.pr.outputs.labels ), format(',{0},', env.COPILOT_LABEL) )
+          }}
         uses: hmarr/auto-approve-action@v4
         with:
-          # GITHUB_TOKEN reicht, solange oben permissions gesetzt sind
           github-token: ${{ secrets.GITHUB_TOKEN }}
           review-message: "🤖 Auto-approved: '${{ env.COPILOT_LABEL }}' label present."
-
-      - name: No action (self PR or not eligible)
-        if: ${{ always() && (steps.decide.outcome == 'skipped' || steps.decide.outputs.approve == 'no') }}
-        run: |
-          if [ "${{ steps.pr.outputs.author }}" = "${ALLOWED_USER}" ]; then
-            echo "ℹ️ Eigener PR erkannt — keine automatische Aktion (kein Approve, kein Merge)."
-          elif [ "${{ steps.pr.outputs.head_repo }}" != "${{ steps.pr.outputs.base_repo }}" ]; then
-            echo "ℹ️ PR stammt aus Fork — übersprungen."
-          else
-            echo "ℹ️ Bedingungen nicht erfüllt — keine Aktion."
-          fi
