@@ -1,106 +1,64 @@
-name: Auto-approve PR
-on:
-  pull_request_target:
-    types: [opened, edited, labeled, synchronize]
+  - name: Decide action (no auto-merge)
+    run: |
+      pr_number="${{ steps.pr-details.outputs.number }}"
+      pr_author="${{ steps.pr-details.outputs.author }}"
+      pr_labels="${{ steps.pr-details.outputs.labels }}"
+      head_repo="${{ steps.pr-details.outputs.head-repo }}"
+      pr_state="${{ steps.pr-details.outputs.state }}"
+      repo="${{ github.repository }}"
 
-permissions:
-  contents: read
-  pull-requests: write
+      echo "🔍 PR #$pr_number by $pr_author from $head_repo"
+      echo "📊 Labels: $pr_labels"
+      echo "📈 State: $pr_state"
 
-jobs:
-  auto-approve:
-    runs-on: ubuntu-latest
-    env:
-      GITHUB_TOKEN: ${{ secrets.APPROVER_PAT }}
-      ALLOWED_USER: "IUEmirhanDemir"
-      COPILOT_LABEL: "copilot-approved"
-    steps:
-      - name: Load PR details
-        id: pr-details
-        run: |
-          echo "number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
-          echo "author=${{ github.event.pull_request.user.login }}" >> $GITHUB_OUTPUT
-          echo "head-repo=${{ github.event.pull_request.head.repo.full_name }}" >> $GITHUB_OUTPUT
-          
-          # Labels extrahieren
-          labels=$(echo '${{ toJson(github.event.pull_request.labels.*.name) }}' | jq -r 'join(",")')
-          echo "labels=$labels" >> $GITHUB_OUTPUT
-      
-      - name: Auto approve
-        run: |
-          pr_number="${{ steps.pr-details.outputs.number }}"
-          pr_author="${{ steps.pr-details.outputs.author }}"
-          pr_labels="${{ steps.pr-details.outputs.labels }}"
-          head_repo="${{ steps.pr-details.outputs.head-repo }}"
-          repo="${{ github.repository }}"
-          
-          echo "PR #$pr_number by $pr_author from $head_repo"
-          echo "Labels: $pr_labels"
-          
-          # Sicherheitscheck: Keine Forks
-          if [ "$head_repo" != "$repo" ]; then
-            echo "❌ PR ist von einem Fork - überspringe aus Sicherheitsgründen"
-            exit 0
-          fi
-          
-          # Prüfe Bedingungen
-          should_approve=false
-          if [ "$pr_author" = "$ALLOWED_USER" ]; then
-            echo "✅ Author ist berechtigt: $pr_author"
-            should_approve=true
-          elif echo "$pr_labels" | grep -q "$COPILOT_LABEL"; then
-            echo "✅ Copilot-Label gefunden: $COPILOT_LABEL"
-            should_approve=true
-          else
-            echo "❌ Keine Genehmigungsbedingung erfüllt"
-          fi
-          
-          if [ "$should_approve" = "true" ]; then
-            echo "🚀 Genehmige PR #$pr_number..."
-            
-            # Prüfe zuerst ob PR bereits approved ist
-            existing_reviews=$(curl -s \
-              -H "Accept: application/vnd.github+json" \
-              -H "Authorization: Bearer $GITHUB_TOKEN" \
-              -H "X-GitHub-Api-Version: 2022-11-28" \
-              "https://api.github.com/repos/$repo/pulls/$pr_number/reviews")
-            
-            if echo "$existing_reviews" | jq -e '.[] | select(.state == "APPROVED")' > /dev/null 2>&1; then
-              echo "✅ PR ist bereits genehmigt - überspringe"
-              exit 0
-            fi
-            
-            # Versuche zu genehmigen
-            response=$(curl -s -w "%{http_code}" \
-              -X POST \
-              -H "Accept: application/vnd.github+json" \
-              -H "Authorization: Bearer $GITHUB_TOKEN" \
-              -H "X-GitHub-Api-Version: 2022-11-28" \
-              "https://api.github.com/repos/$repo/pulls/$pr_number/reviews" \
-              -d '{"event":"APPROVE","body":"🤖 Auto-approved: Author ist berechtigt oder Copilot-Label vorhanden"}')
-            
-            http_code="${response: -3}"
-            response_body="${response%???}"
-            
-            echo "HTTP Status: $http_code"
-            echo "Response: $response_body"
-            
-            if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
-              echo "✅ PR wurde erfolgreich genehmigt!"
-            else
-              echo "❌ Fehler beim Genehmigen:"
-              echo "$response_body" | jq -r '.message // .errors[].message // .' 2>/dev/null || echo "$response_body"
-              
-              # Häufige 422 Fehler
-              if [ "$http_code" = "422" ]; then
-                echo ""
-                echo "Mögliche Ursachen für HTTP 422:"
-                echo "- Du kannst deine eigenen PRs nicht approven"
-                echo "- PR ist bereits approved"
-                echo "- PR ist bereits gemerged/closed"
-                echo "- Keine ausreichenden Berechtigungen"
-              fi
-              
-              exit 1
-            fi
-          fi
+      # Sicherheitscheck: Keine Forks
+      if [ "$head_repo" != "$repo" ]; then
+        echo "❌ PR ist von einem Fork - überspringe aus Sicherheitsgründen"
+        exit 0
+      fi
+
+      # Prüfe ob PR offen ist
+      if [ "$pr_state" != "open" ]; then
+        echo "ℹ️ PR ist nicht offen (State: $pr_state) - überspringe"
+        exit 0
+      fi
+
+      # Verhalten:
+      # - Eigener Benutzer: keine automatische Aktion (nur Info)
+      # - Copilot-Label: approve (kein Merge)
+      # - Sonst: keine Aktion
+      if [ "$pr_author" = "$ALLOWED_USER" ]; then
+        echo "ℹ️ Eigener PR erkannt: $pr_author — keine automatische Aktion (kein approve, kein merge)."
+        exit 0
+      fi
+
+      if echo "$pr_labels" | grep -q "$COPILOT_LABEL"; then
+        echo "✅ Copilot-Label gefunden: $COPILOT_LABEL — versuche, PR zu approven (kein Merge)."
+
+        approve_response=$(curl -s -w "%{http_code}" \
+          -X POST \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer $GITHUB_TOKEN" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          "https://api.github.com/repos/$repo/pulls/$pr_number/reviews" \
+          -d '{"event":"APPROVE","body":"🤖 Auto-approved: Copilot-Label erkannt"}')
+
+        approve_code="${approve_response: -3}"
+        approve_body="${approve_response%???}"
+
+        echo "📊 Approval HTTP Status: $approve_code"
+
+        if [ "$approve_code" -ge 200 ] && [ "$approve_code" -lt 300 ]; then
+          echo "🎉 PR #$pr_number wurde erfolgreich approved (kein Merge)."
+          exit 0
+        else
+          echo "❌ Approval fehlgeschlagen (HTTP $approve_code):"
+          echo "$approve_body" | jq -r '.message // .' 2>/dev/null || echo "$approve_body"
+          # Keine Merge-Aktion: Fehler melden, aber Workflow insgesamt mit Fehler beenden
+          exit 1
+        fi
+      else
+        echo "❌ Keine Aktionsbedingung erfüllt."
+        echo "💡 Tipp: Füge das Label '$COPILOT_LABEL' hinzu, damit Copilot-PRs automatisch approved werden. Eigene PRs werden nicht automatisch approved oder gemerged."
+        exit 0
+      fi
