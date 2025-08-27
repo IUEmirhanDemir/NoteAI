@@ -1,5 +1,4 @@
-name: Auto-approve (owner or copilot label)
-
+name: Auto-approve PR
 on:
   pull_request_target:
     types: [opened, edited, labeled, synchronize]
@@ -12,52 +11,60 @@ jobs:
   auto-approve:
     runs-on: ubuntu-latest
     env:
-      APPROVER_PAT: ${{ secrets.APPROVER_PAT }}
-      ALLOWED_USER: "IUEmirhanDemir"   # <= dein GitHub Username
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      ALLOWED_USER: "IUEmirhanDemir"
       COPILOT_LABEL: "copilot-approved"
     steps:
-      - name: Load PR event
-        id: load
+      - name: Load PR details
+        id: pr-details
         run: |
-          echo "PR_NUMBER=$(jq -r .pull_request.number < $GITHUB_EVENT_PATH)" >> $GITHUB_OUTPUT
-          echo "PR_AUTHOR=$(jq -r .pull_request.user.login < $GITHUB_EVENT_PATH)" >> $GITHUB_OUTPUT
-          labels=$(jq -r '.pull_request.labels[].name // empty' < $GITHUB_EVENT_PATH | paste -sd "," -)
-          echo "PR_LABELS=$labels" >> $GITHUB_OUTPUT
-          echo "HEAD_REPO=$(jq -r .pull_request.head.repo.full_name < $GITHUB_EVENT_PATH)" >> $GITHUB_OUTPUT
-        shell: bash
-
-      - name: Decide & Approve (if allowed)
+          echo "number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+          echo "author=${{ github.event.pull_request.user.login }}" >> $GITHUB_OUTPUT
+          echo "head-repo=${{ github.event.pull_request.head.repo.full_name }}" >> $GITHUB_OUTPUT
+          
+          # Labels extrahieren
+          labels=$(echo '${{ toJson(github.event.pull_request.labels.*.name) }}' | jq -r 'join(",")')
+          echo "labels=$labels" >> $GITHUB_OUTPUT
+      
+      - name: Auto approve
         run: |
-          pr_number="${{ steps.load.outputs.PR_NUMBER }}"
-          pr_author="${{ steps.load.outputs.PR_AUTHOR }}"
-          pr_labels="${{ steps.load.outputs.PR_LABELS }}"
-          head_repo="${{ steps.load.outputs.HEAD_REPO }}"
+          pr_number="${{ steps.pr-details.outputs.number }}"
+          pr_author="${{ steps.pr-details.outputs.author }}"
+          pr_labels="${{ steps.pr-details.outputs.labels }}"
+          head_repo="${{ steps.pr-details.outputs.head-repo }}"
           repo="${{ github.repository }}"
-
-          echo "PR #$pr_number by $pr_author (head repo: $head_repo)"
-          # Safety: do not run for forks (prevents secret exposure)
+          
+          echo "PR #$pr_number by $pr_author from $head_repo"
+          echo "Labels: $pr_labels"
+          
+          # Sicherheitscheck: Keine Forks
           if [ "$head_repo" != "$repo" ]; then
-            echo "PR is from a fork ($head_repo) — skipping approval to avoid exposing secrets."
+            echo "❌ PR ist von einem Fork - überspringe aus Sicherheitsgründen"
             exit 0
           fi
-
-          # Condition: author is allowed OR label is present
-          if [ "$pr_author" = "$ALLOWED_USER" ] || echo "$pr_labels" | grep -qw "$COPILOT_LABEL"; then
-            echo "Condition met — approving PR #$pr_number"
-            api_url="https://api.github.com/repos/${repo}/pulls/${pr_number}/reviews"
-            body='{"event":"APPROVE","body":"Auto-approved by workflow (allowed author or copilot-approved label)."}'
-            http_status=$(curl -s -o /dev/null -w "%{http_code}" \
-              -X POST "$api_url" \
-              -H "Authorization: token ${APPROVER_PAT}" \
-              -H "Accept: application/vnd.github+json" \
-              -d "$body")
-            if [ "$http_status" -ge 200 ] && [ "$http_status" -lt 300 ]; then
-              echo "Approval posted (HTTP $http_status)."
-            else
-              echo "Failed to post approval (HTTP $http_status)."
-              exit 1
-            fi
+          
+          # Prüfe Bedingungen
+          should_approve=false
+          if [ "$pr_author" = "$ALLOWED_USER" ]; then
+            echo "✅ Author ist berechtigt: $pr_author"
+            should_approve=true
+          elif echo "$pr_labels" | grep -q "$COPILOT_LABEL"; then
+            echo "✅ Copilot-Label gefunden: $COPILOT_LABEL"
+            should_approve=true
           else
-            echo "No approval conditions met: author=$pr_author ; labels=$pr_labels"
+            echo "❌ Keine Genehmigungsbedingung erfüllt"
           fi
-        shell: bash
+          
+          if [ "$should_approve" = "true" ]; then
+            echo "🚀 Genehmige PR #$pr_number..."
+            
+            curl -L \
+              -X POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GITHUB_TOKEN" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/$repo/pulls/$pr_number/reviews" \
+              -d '{"event":"APPROVE","body":"🤖 Auto-approved: Author ist berechtigt oder Copilot-Label vorhanden"}'
+            
+            echo "✅ PR wurde automatisch genehmigt!"
+          fi
