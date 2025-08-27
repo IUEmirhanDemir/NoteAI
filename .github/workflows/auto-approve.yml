@@ -1,0 +1,35 @@
+name: Auto-approve (owner or copilot)
+
+on:
+  pull_request_target:
+    types: [opened, edited, labeled, synchronize]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  auto-approve:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Load event info
+        id: info
+        run: |
+          echo "pr_author=${{ github.event.pull_request.user.login }}" >> $GITHUB_OUTPUT
+          # collect label names (comma separated)
+          labels=$(jq -r '.pull_request.labels[].name // empty' < "$GITHUB_EVENT_PATH" | paste -sd "," -)
+          echo "labels=$labels" >> $GITHUB_OUTPUT
+
+      - name: Auto-approve if author is allowed user
+        if: ${{ steps.info.outputs.pr_author == 'IUEmirhanDemir' }}
+        uses: hmarr/auto-approve-action@v4
+        with:
+          github-token: ${{ secrets.APPROVER_PAT }}
+          review-message: "Auto-approved: Author is allowed user."
+
+      - name: Auto-approve if copilot-approved label present
+        if: contains( steps.info.outputs.labels, 'copilot-approved' )
+        uses: hmarr/auto-approve-action@v4
+        with:
+          github-token: ${{ secrets.APPROVER_PAT }}
+          review-message: "Auto-approved: label copilot-approved present."
