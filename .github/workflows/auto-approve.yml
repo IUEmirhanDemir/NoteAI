@@ -1,64 +1,66 @@
-  - name: Decide action (no auto-merge)
-    run: |
-      pr_number="${{ steps.pr-details.outputs.number }}"
-      pr_author="${{ steps.pr-details.outputs.author }}"
-      pr_labels="${{ steps.pr-details.outputs.labels }}"
-      head_repo="${{ steps.pr-details.outputs.head-repo }}"
-      pr_state="${{ steps.pr-details.outputs.state }}"
-      repo="${{ github.repository }}"
+name: Auto-approve (Copilot only; no auto-merge)
 
-      echo "🔍 PR #$pr_number by $pr_author from $head_repo"
-      echo "📊 Labels: $pr_labels"
-      echo "📈 State: $pr_state"
+on:
+  pull_request_target:
+    types: [opened, edited, labeled, synchronize, reopened]
 
-      # Sicherheitscheck: Keine Forks
-      if [ "$head_repo" != "$repo" ]; then
-        echo "❌ PR ist von einem Fork - überspringe aus Sicherheitsgründen"
-        exit 0
-      fi
+permissions:
+  pull-requests: write
+  contents: read
 
-      # Prüfe ob PR offen ist
-      if [ "$pr_state" != "open" ]; then
-        echo "ℹ️ PR ist nicht offen (State: $pr_state) - überspringe"
-        exit 0
-      fi
+env:
+  # Dein eigener Account: Eigene PRs werden nicht auto-approved
+  ALLOWED_USER: IUEmirhanDemir
+  # Label, das Copilot-PRs kennzeichnet (bei Bedarf anpassen)
+  COPILOT_LABEL: copilot
 
-      # Verhalten:
-      # - Eigener Benutzer: keine automatische Aktion (nur Info)
-      # - Copilot-Label: approve (kein Merge)
-      # - Sonst: keine Aktion
-      if [ "$pr_author" = "$ALLOWED_USER" ]; then
-        echo "ℹ️ Eigener PR erkannt: $pr_author — keine automatische Aktion (kein approve, kein merge)."
-        exit 0
-      fi
+jobs:
+  auto-approve:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Load PR details
+        id: pr
+        run: |
+          echo "number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+          echo "author=${{ github.event.pull_request.user.login }}" >> $GITHUB_OUTPUT
+          echo "state=${{ github.event.pull_request.state }}" >> $GITHUB_OUTPUT
+          echo "base_repo=${{ github.repository }}" >> $GITHUB_OUTPUT
+          echo "head_repo=${{ github.event.pull_request.head.repo.full_name }}" >> $GITHUB_OUTPUT
+          labels=$(jq -r '.pull_request.labels[].name // empty' "$GITHUB_EVENT_PATH" | paste -sd "," -)
+          echo "labels=$labels" >> $GITHUB_OUTPUT
 
-      if echo "$pr_labels" | grep -q "$COPILOT_LABEL"; then
-        echo "✅ Copilot-Label gefunden: $COPILOT_LABEL — versuche, PR zu approven (kein Merge)."
+      - name: Decide action (no auto-merge)
+        id: decide
+        # Nur offene PRs, kein Fork, und nicht dein eigener PR
+        if: ${{ steps.pr.outputs.state == 'open' && steps.pr.outputs.head_repo == steps.pr.outputs.base_repo && steps.pr.outputs.author != env.ALLOWED_USER }}
+        env:
+          PR_LABELS: ${{ steps.pr.outputs.labels }}
+        run: |
+          echo "🔍 PR #${{ steps.pr.outputs.number }} by ${{ steps.pr.outputs.author }} from ${{ steps.pr.outputs.head_repo }}"
+          echo "📊 Labels: $PR_LABELS"
+          if echo "$PR_LABELS" | tr ',' '\n' | grep -qx "${COPILOT_LABEL}"; then
+            echo "approve=yes" >> $GITHUB_OUTPUT
+            echo "✅ Copilot-Label gefunden: ${COPILOT_LABEL} — freigeben (kein Merge)."
+          else
+            echo "approve=no" >> $GITHUB_OUTPUT
+            echo "ℹ️ Kein Copilot-Label — keine Aktion."
+          fi
 
-        approve_response=$(curl -s -w "%{http_code}" \
-          -X POST \
-          -H "Accept: application/vnd.github+json" \
-          -H "Authorization: Bearer $GITHUB_TOKEN" \
-          -H "X-GitHub-Api-Version: 2022-11-28" \
-          "https://api.github.com/repos/$repo/pulls/$pr_number/reviews" \
-          -d '{"event":"APPROVE","body":"🤖 Auto-approved: Copilot-Label erkannt"}')
+      - name: Approve (no merge)
+        if: ${{ steps.decide.outputs.approve == 'yes' }}
+        uses: hmarr/auto-approve-action@v4
+        with:
+          # GITHUB_TOKEN reicht, solange oben permissions gesetzt sind
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          review-message: "🤖 Auto-approved: '${{ env.COPILOT_LABEL }}' label present."
 
-        approve_code="${approve_response: -3}"
-        approve_body="${approve_response%???}"
-
-        echo "📊 Approval HTTP Status: $approve_code"
-
-        if [ "$approve_code" -ge 200 ] && [ "$approve_code" -lt 300 ]; then
-          echo "🎉 PR #$pr_number wurde erfolgreich approved (kein Merge)."
-          exit 0
-        else
-          echo "❌ Approval fehlgeschlagen (HTTP $approve_code):"
-          echo "$approve_body" | jq -r '.message // .' 2>/dev/null || echo "$approve_body"
-          # Keine Merge-Aktion: Fehler melden, aber Workflow insgesamt mit Fehler beenden
-          exit 1
-        fi
-      else
-        echo "❌ Keine Aktionsbedingung erfüllt."
-        echo "💡 Tipp: Füge das Label '$COPILOT_LABEL' hinzu, damit Copilot-PRs automatisch approved werden. Eigene PRs werden nicht automatisch approved oder gemerged."
-        exit 0
-      fi
+      - name: No action (self PR or not eligible)
+        if: ${{ always() && (steps.decide.outcome == 'skipped' || steps.decide.outputs.approve == 'no') }}
+        run: |
+          if [ "${{ steps.pr.outputs.author }}" = "${ALLOWED_USER}" ]; then
+            echo "ℹ️ Eigener PR erkannt — keine automatische Aktion (kein Approve, kein Merge)."
+          elif [ "${{ steps.pr.outputs.head_repo }}" != "${{ steps.pr.outputs.base_repo }}" ]; then
+            echo "ℹ️ PR stammt aus Fork — übersprungen."
+          else
+            echo "ℹ️ Bedingungen nicht erfüllt — keine Aktion."
+          fi
