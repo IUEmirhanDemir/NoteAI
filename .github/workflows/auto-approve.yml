@@ -4,7 +4,6 @@ on:
   pull_request_target:
     types: [opened, edited, labeled, synchronize, reopened]
 
-# Falls du in den Repo-Settings nicht "Read and write" gesetzt hast:
 permissions:
   pull-requests: write
   contents: read
@@ -12,7 +11,7 @@ permissions:
 env:
   # Dein eigener Account: Eigene PRs NICHT auto-approven
   ALLOWED_USER: IUEmirhanDemir
-  # Label, das Copilot-PRs markiert
+  # Label, das Copilot-PRs markiert (bei Bedarf umbenennen)
   COPILOT_LABEL: copilot
 
 jobs:
@@ -31,7 +30,6 @@ jobs:
           echo "labels=$labels" >> $GITHUB_OUTPUT
 
       - name: Approve if copilot label (no merge)
-        # Bedingungen: PR offen, kein Fork, nicht dein eigener PR, Label vorhanden
         if: >
           ${{
             steps.pr.outputs.state == 'open' &&
