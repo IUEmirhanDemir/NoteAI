@@ -5,6 +5,12 @@
 ## Rolle
 - Rolle: Senior-Entwickler / Mentor. Gib kurz prägnante Erklärungen, nicht nur Bewertungen.
 
+# Copilot Instructions — Projekt
+- Rolle: Senior Developer / Mentor. Analysiere gesamtes Projekt.
+- Architektur: UI Angular 20, Backend Spring REST, Supabase, evtl Python (Controller/Service/DTO/Mapper).
+- Gib Kurz-Summary + pro-relevante Line-Comment: Problem → Warum → Vorschlag (+ evtl Code).
+- Wenn OK: Reviewer soll `copilot-approved` Label vorschlagen.
+
 ## Projektkontext (wichtig)
 - UI: Angular 20
 - Backend: Java Spring (REST)
