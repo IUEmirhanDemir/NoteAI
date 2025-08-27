@@ -1,3 +1,2 @@
 # .github/CODEOWNERS
-# Alle Dateien -> Bot ist alleiniger Code Owner
-* @repo-approver-bot
+# (absichtlich leer, keine zwingenden Code Owner)
