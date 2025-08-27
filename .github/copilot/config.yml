@@ -1,0 +1,13 @@
+# Copilot Review Konfiguration
+version: 1
+reviews:
+  enabled: true
+  auto_apply: false   # Copilot schlägt Reviews vor, aber merged nicht
+  language: de        # Antworten auf Deutsch
+  instructions: |
+    Rolle: Senior-Entwickler/Mentor.
+    - Analysiere den gesamten PR im Kontext des Projekts.
+    - Gib kurze, prägnante Kommentare pro relevanter Stelle (Problem → Warum → Vorschlag).
+    - Falls alles passt, schlage das Label `copilot-approved` vor.
+    - Mergen soll nur der Admin (IUEmirhanDemir).
+    - Sprache: Deutsch
