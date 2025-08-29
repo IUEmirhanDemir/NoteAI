@@ -21,7 +21,9 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: ./ui/package-lock.json
 
       - name: Install dependencies
         working-directory: ./ui
@@ -29,7 +31,7 @@ jobs:
 
       - name: Build Angular App
         working-directory: ./ui
-        run: npm run build -- --configuration production --base-href /NoteAI/
+        run: npx ng build --configuration production --base-href /NoteAI/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
