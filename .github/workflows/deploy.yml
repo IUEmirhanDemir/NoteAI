@@ -13,7 +13,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -30,13 +31,13 @@ jobs:
         working-directory: ./ui
         run: npx ng build --configuration production --base-href /NoteAI/
 
-      - name: Check dist folder
-        run: ls -R ./ui/dist/
+      - name: Prüfe Build Output
+        run: ls -R ./ui/dist/NoteAI
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./ui/dist/NoteAI   
+          path: ./ui/dist/NoteAI
 
   deploy:
     needs: build
