@@ -2,7 +2,7 @@ name: Deploy Angular to GitHub Pages
 
 on:
   push:
-    branches: [main]   
+    branches: [main] 
 
 permissions:
   contents: read
@@ -23,7 +23,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'  
+          node-version: '22'                
           cache: 'npm'
           cache-dependency-path: ./ui/package-lock.json
 
@@ -35,12 +35,29 @@ jobs:
         working-directory: ./ui
         run: npx ng build --configuration production --base-href /NoteAI/
 
+    
+      - name: Detect dist folder
+        id: dist
+        run: |
+          set -e
+          ROOT="./ui/dist"
+          # Nimm den ersten Unterordner (z. B. ./ui/dist/NoteAI)
+          APP_DIR=$(ls -d "$ROOT"/*/ | head -n 1)
+          # Wenn es darunter einen "browser"-Ordner gibt, nimm den
+          if [ -d "${APP_DIR}browser" ]; then
+            DIST_DIR="${APP_DIR}browser"
+          else
+            DIST_DIR="${APP_DIR%/}"
+          fi
+          echo "DIST_DIR=$DIST_DIR" >> $GITHUB_ENV
+          echo "dist_dir=$DIST_DIR" >> $GITHUB_OUTPUT
+          echo "Resolved dist: $DIST_DIR"
+          ls -la "$DIST_DIR"
+
       
       - name: Add SPA fallback (404.html)
-        run: cp ./ui/dist/NoteAI/index.html ./ui/dist/NoteAI/404.html
-
-      - name: List output
-        run: ls -la ./ui/dist/NoteAI
+        run: |
+          cp "${{ env.DIST_DIR }}/index.html" "${{ env.DIST_DIR }}/404.html"
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
@@ -48,7 +65,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./ui/dist/NoteAI  
+          path: ${{ env.DIST_DIR }}
 
   deploy:
     needs: build
