@@ -1,0 +1,48 @@
+name: Copilot PR Review (no scripts)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  request-copilot-review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Compose prompt (default)
+        id: prompt
+        run: |
+          cat > prompt.txt << 'EOF'
+          @copilot act as a senior mentor and review this PR.
+          Tech stack: Java (Spring Boot REST), Angular (NG), TypeScript, HTML/CSS, and some Python tooling.
+          Goals:
+          - Clean Code & Readability (SOLID, DRY/KISS, kleine Funktionen, sprechende Namen)
+          - Architektur (Layering, REST-Design, DTO/Mapper, Fehlerbehandlung, Transaktionen)
+          - Java: null-safety, Optional, Streams, Exceptions, logging, Spring Boot config, validation
+          - Angular: Inputs/Outputs, Signals/RxJS, OnPush, DI, Folder-Struktur, ESLint-Regeln
+          - Security: OWASP Top 10, Injection, AuthZ/AuthN, Secrets, CORS, HTTP headers
+          - Performance: N+1, Indexe, HTTP-Caching, Bundle size, change detection
+          - Tests: Unit/IT/E2E, Coverage, deterministische Tests
+          Please add **inline suggestions** and actionable examples. If unsafe patterns appear, propose fixes.
+          EOF
+
+      - name: Tighten prompt for main/master
+        if: ${{ github.event.pull_request.base.ref == 'main'}}
+        run: |
+          cat >> prompt.txt << 'EOF'
+
+          This PR targets the protected branch (${BASE_BRANCH:-main}). 
+          Be extra strict: enforce contract tests for REST, verify public API changes, check migration/rollback steps,
+          validate DB schema diffs, and ensure backward compatibility. Demand benchmarks if performance is affected.
+          EOF
+
+      - name: Post request to Copilot on PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --repo ${{ github.repository }} \
+            --body-file prompt.txt
